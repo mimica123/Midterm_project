@@ -6,7 +6,7 @@ import psycopg2 as pg
 # I did verify that python is smart enough to only
 # run the file once, that being when the module name is
 # encountered for the first time, then reuse the same
-# variables etc. that the module defines. So that answers my
+# variables etc that the module defines. So that answers my
 # concern about the possibility of creating a new connection
 # for every individual import statement
 
@@ -35,9 +35,9 @@ def execute_query(sql: str):
     # is meant more for individual queries, and that initializing
     # it each time draws from a pool of connections maintained by
     # the conn object. Then the cursor can be closed once the query
-    # is finished and that connection will be returned to the conn
-    # object. My memory is foggy but I believe that's the approximate
-    # workflow for the js library, why should this be different
+    # is finished and that connection will be returned to the pool
+    # My memory is foggy but I believe that's the approximate
+    # workflow for the pg.js library, I would hope that this is the same
     # It can always be changed if we discover that's incorrect
     with _conn.cursor() as cur:
         cur.execute(sql)

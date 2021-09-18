@@ -1,4 +1,4 @@
-# Just to keep some common plotting function tidy and out of the way
+# Just to keep some common plotting functions tidy and out of the way
 # I'm not sure how including matplotlib here will perform in a
 # notebook. I imagine it will work because of how seaborn behaves,
 # but it still feels incredibly off. So all of these methods will
