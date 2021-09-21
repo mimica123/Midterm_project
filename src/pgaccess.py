@@ -46,6 +46,42 @@ def execute_query(sql: str):
         df = pd.DataFrame(data, columns=columns)
         return df
 
+def get_test_data(data_length):
+    '''
+    Gets random rows from the flights database, only including those columns
+    available in the test_flights table, along with the target column.
+    
+        Parameters:
+            data_length (int): How many rows to return.
+                The number of rows returned won't be exact, due to rounding
+                errors and the random selection just isn't that accurate in
+                order to remain fast. The amount should be close enough anyways.
+            
+        Returns:
+            result (pd.DataFrame)
+    '''
+    ROWCOUNT = 15927485 # At latest count
+    with _conn.cursor() as cur:
+        selectionFrac = data_length / ROWCOUNT
+        columns = [
+            'fl_date', 'mkt_unique_carrier', 'branded_code_share', 'mkt_carrier',
+            'mkt_carrier_fl_num', 'op_unique_carrier', 'tail_num', 'op_carrier_fl_num',
+            'origin_airport_id', 'origin', 'origin_city_name', 'dest_airport_id',
+            'dest', 'dest_city_name', 'crs_dep_time', 'crs_arr_time', 'dup',
+            'crs_elapsed_time', 'flights', 'distance', 'arr_delay'
+        ]
+        sql = f'''
+        SELECT {', '.join(columns)} AS target
+        FROM flights
+        TABLESAMPLE BERNOULLI ({selectionFrac * 100})
+        WHERE arr_delay IS NOT NULL
+        '''
+        cur.execute(sql)
+        data = cur.fetchall()
+        columns = [c.name for c in cur.description]
+        df = pd.DataFrame(data, columns=columns)
+        return df
+    
 # Commonly executed queries
 def get_flight_delays():
     '''
