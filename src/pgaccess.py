@@ -20,6 +20,10 @@ _conn = pg.connect(**pg_cfg)
 # Don't initialize a cursor here, those should probably be
 # function-specific. You know, avoid clashes and all that.
 
+# The latest row count. It's used in the test data function and
+# I might want to have access if I want all rows for some reason
+_rowcount = 15927485
+
 def execute_query(sql: str):
     '''
     Runs a single query against the database and returns the result
@@ -60,9 +64,8 @@ def get_test_data(data_length):
         Returns:
             result (pd.DataFrame)
     '''
-    ROWCOUNT = 15927485 # At latest count
     with _conn.cursor() as cur:
-        selectionFrac = data_length / ROWCOUNT
+        selectionFrac = data_length / _rowcount
         columns = [
             'fl_date', 'mkt_unique_carrier', 'branded_code_share', 'mkt_carrier',
             'mkt_carrier_fl_num', 'op_unique_carrier', 'tail_num', 'op_carrier_fl_num',
@@ -76,6 +79,46 @@ def get_test_data(data_length):
         TABLESAMPLE BERNOULLI ({selectionFrac * 100})
         WHERE arr_delay IS NOT NULL
         '''
+        cur.execute(sql)
+        data = cur.fetchall()
+        columns = [c.name for c in cur.description]
+        df = pd.DataFrame(data, columns=columns)
+        # Convert flight date into an actual date column
+        df['fl_date'] = pd.to_datetime(df['fl_date'])
+        return df
+    
+def get_filtered_test_data(data_length, filters):
+    '''
+    Gets random rows from the flights database, only including those columns
+    available in the test_flights table, along with the target column.
+    
+    Allows you to filter based on some given conditions.
+    
+        Parameters:
+            data_length (int): How many rows to select, before filtering
+            
+            filters (str): Where clause string
+                I might eventually make this a dict similar to what you might
+                see in a mongodb query, but for now that would take too long
+                
+        Returns:
+            pandas DataFrame
+    '''
+    with _conn.cursor() as cur:
+        selectionFrac = data_length / _rowcount
+        columns = [
+            'fl_date', 'mkt_unique_carrier', 'branded_code_share', 'mkt_carrier',
+            'mkt_carrier_fl_num', 'op_unique_carrier', 'tail_num', 'op_carrier_fl_num',
+            'origin_airport_id', 'origin', 'origin_city_name', 'dest_airport_id',
+            'dest', 'dest_city_name', 'crs_dep_time', 'crs_arr_time', 'dup',
+            'crs_elapsed_time', 'flights', 'distance', 'arr_delay'
+        ]
+        sql = f'''
+        SELECT {', '.join(columns)} AS target
+        FROM flights
+        TABLESAMPLE BERNOULLI ({selectionFrac * 100})
+        WHERE arr_delay IS NOT NULL AND ({filters})
+        ''' # Nobody better actually use this without fixing the sql attack I swear to god
         cur.execute(sql)
         data = cur.fetchall()
         columns = [c.name for c in cur.description]
@@ -100,3 +143,10 @@ def get_flight_delays():
         data = cur.fetchall()
         delays = np.array(data).flatten()
         return delays
+    
+# For those times you screw up... oopsie
+def reset_transaction():
+    '''
+    Rollback the current transaction, if it was aborted unexpectedly
+    '''
+    _conn.rollback()
