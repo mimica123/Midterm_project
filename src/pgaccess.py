@@ -80,6 +80,8 @@ def get_test_data(data_length):
         data = cur.fetchall()
         columns = [c.name for c in cur.description]
         df = pd.DataFrame(data, columns=columns)
+        # Convert flight date into an actual date column
+        df['fl_date'] = pd.to_datetime(df['fl_date'])
         return df
     
 # Commonly executed queries
