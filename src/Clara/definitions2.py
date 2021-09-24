@@ -77,18 +77,72 @@ def weight(feature1,feature2, header):
     # Return: [1/4,2/7,3/4,1,5/7]
     #################################
     import pandas as pd
-    import numpy as np
-    data=pd.DataFrame()
-    data[header[0]]=pd.DataFrame(feature1)
-    data[header[1]]=pd.DataFrame(feature2)
-    group=data[[header[0],header[1]]].groupby(header[0]).mean().reset_index()
+    data=pd.DataFrame(list(zip(feature1,feature2)), columns=header)
+    group=data[[header[0],header[1]]].groupby(header[0]).sum().reset_index()
     
-    group['perc']=group[header[1]]/group[header[1]].mean()*100
+    group['perc']=group[header[1]]/len(data)*100
     weight=[]
     for i in data[header[0]]:
         if not group[group[header[0]]==i]['perc'].values>1:
             weight.append(group[group[header[0]]==i]['perc'].values[-1])
         else:
             weight.append(0)
-    #data['perc']=weight
     return weight
+
+def ols(y,X):
+    #################################
+    # Running ordinary linear square with our features
+    # Expected value:
+    #      -A dataframe with the independent features
+    #      -A dataframe with the target feature
+    #
+    #     
+    # Return:
+    #      -Print the result from OLS
+    #
+    # Example:  weight(X,y)
+    #
+    # Return: Sumary, parameters and R2
+    #################################
+    import statsmodels.api as sm
+    model = sm.OLS(y,X)
+    results = model.fit()
+    print(results.summary())
+    print('Parameters: ', results.params)
+    print('R2: ', results.rsquared)
+    
+def linear_regression(X,y):
+    from sklearn.model_selection import train_test_split
+    from sklearn.linear_model import LinearRegression
+    from sklearn.metrics import r2_score
+    X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.25,shuffle=True,random_state=0)
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    y_train_pred = model.predict(X_train)
+    y_test_pred = model.predict(X_test)
+
+    r2_train = r2_score(y_train, y_train_pred)
+    r2_test = r2_score(y_test, y_test_pred)
+
+    print(f'Train R^2:\t{r2_train}\n\
+    Test R^2:\t{r2_test}')
+    
+def polynomial_regression(X,y):
+    from sklearn.preprocessing import PolynomialFeatures
+    from sklearn.model_selection import train_test_split
+    from sklearn.metrics import r2_score
+    X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.25,shuffle=True,random_state=0)
+    polynomial = PolynomialFeatures(degree=2)
+
+    Xpoly_train = polynomial.fit_transform(X_train)
+    Xpoly_test = polynomial.transform(X_test)
+
+    print(f'Number of polynomial features: {Xpoly_train.shape[1]}')
+
+    model.fit(Xpoly_train, y_train)
+    ypoly_train_pred = polynomial.predict(Xpoly_train)
+    ypoly_test_pred = polynomial.predict(Xpoly_test)
+
+    r2poly_train = r2_score(y_train, ypoly_train_pred)
+    r2poly_test = r2_score(y_test, ypoly_test_pred)
+    print(f'Train R^2:\t{r2poly_train}\nTest R^2:\t{r2poly_test}')
